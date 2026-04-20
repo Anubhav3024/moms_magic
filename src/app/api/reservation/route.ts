@@ -4,31 +4,22 @@ import { Reservation, ReservationOffer } from "@/models";
 import crypto from "crypto";
 import { getAdminSession } from "@/lib/adminSession";
 import { toSlotKey } from "@/lib/reservationSlot";
+import { asValidationMessage, reservationCreateSchema } from "@/lib/validation";
+import { computeReservationAdvanceAmount } from "@/lib/paymentIntegrity";
 
 export async function POST(request: Request) {
   try {
     await dbConnect();
-    const body = await request.json();
+    const body = reservationCreateSchema.parse(await request.json());
 
-    const userName = String(body?.userName || "").trim();
-    const email = String(body?.email || "")
-      .trim()
-      .toLowerCase();
-    const phone = String(body?.phone || "").trim();
-    const time = String(body?.time || "").trim();
-    const specialRequest = String(body?.specialRequest || "").trim();
-    const offerId = body?.offerId ? String(body.offerId) : "";
-
-    const seatsRaw = Number(body?.seats);
-    const seats = Number.isFinite(seatsRaw) ? Math.max(1, Math.floor(seatsRaw)) : 1;
-
-    const date = body?.date ? new Date(body.date) : null;
-    if (!userName || !email || !phone || !time || !date || Number.isNaN(date.getTime())) {
-      return NextResponse.json(
-        { success: false, error: "Missing or invalid reservation details" },
-        { status: 400 },
-      );
-    }
+    const userName = body.userName;
+    const email = body.email.trim().toLowerCase();
+    const phone = body.phone;
+    const time = body.time;
+    const specialRequest = body.specialRequest?.trim() || "";
+    const offerId = body.offerId ? String(body.offerId) : "";
+    const seats = body.seats;
+    const date = body.date;
 
     const slotMinutes = Number(process.env.RESERVATION_SLOT_MINUTES || 60);
     const slotKey = toSlotKey({
@@ -37,8 +28,12 @@ export async function POST(request: Request) {
       slotMinutes: Number.isFinite(slotMinutes) ? slotMinutes : 60,
     });
 
-    const maxSeatsRaw = Number(process.env.RESERVATION_MAX_SEATS_PER_SLOT || 20);
-    const maxSeats = Number.isFinite(maxSeatsRaw) ? Math.max(1, Math.floor(maxSeatsRaw)) : 20;
+    const maxSeatsRaw = Number(
+      process.env.RESERVATION_MAX_SEATS_PER_SLOT || 20,
+    );
+    const maxSeats = Number.isFinite(maxSeatsRaw)
+      ? Math.max(1, Math.floor(maxSeatsRaw))
+      : 20;
 
     if (slotKey) {
       const agg = await Reservation.aggregate([
@@ -57,7 +52,8 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             success: false,
-            error: "This time slot is fully booked. Please choose another slot.",
+            error:
+              "This time slot is fully booked. Please choose another slot.",
           },
           { status: 409 },
         );
@@ -69,15 +65,18 @@ export async function POST(request: Request) {
 
     if (offerId) {
       const offer = await ReservationOffer.findById(offerId).lean();
-      if (offer) {
-        computedTotalAmount = seats * Number(offer.advanceAmountPerPerson || 0);
-        normalizedOfferId = String(offer._id);
+      if (!offer) {
+        return NextResponse.json(
+          { success: false, error: "Invalid reservation offer" },
+          { status: 400 },
+        );
       }
-    }
 
-    if (!computedTotalAmount) {
-      const fallbackAmount = Number(body?.totalAmount);
-      computedTotalAmount = Number.isFinite(fallbackAmount) ? Math.max(0, fallbackAmount) : 0;
+      computedTotalAmount = computeReservationAdvanceAmount({
+        seats,
+        advanceAmountPerPerson: Number(offer.advanceAmountPerPerson || 0),
+      });
+      normalizedOfferId = String(offer._id);
     }
 
     // Generate a unique booking ID
@@ -108,7 +107,9 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Reservation error";
+    const message =
+      asValidationMessage(error) ||
+      (error instanceof Error ? error.message : "Reservation error");
     return NextResponse.json(
       {
         success: false,
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    const session = getAdminSession();
+    const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -134,3 +135,4 @@ export async function GET() {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

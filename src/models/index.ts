@@ -84,6 +84,8 @@ export interface IReservation extends Document {
   paymentStatus: "pending" | "paid" | "failed";
   paymentProvider?: "razorpay";
   razorpayOrderId?: string;
+  razorpayExpectedAmount?: number;
+  razorpayCurrency?: string;
   razorpayPaymentId?: string;
   razorpaySignature?: string;
   bookingId: string;
@@ -112,6 +114,8 @@ const ReservationSchema = new Schema<IReservation>(
     },
     paymentProvider: { type: String, enum: ["razorpay"] },
     razorpayOrderId: { type: String },
+    razorpayExpectedAmount: { type: Number },
+    razorpayCurrency: { type: String, default: "INR" },
     razorpayPaymentId: { type: String },
     razorpaySignature: { type: String },
     bookingId: { type: String, unique: true, required: true },

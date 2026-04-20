@@ -23,7 +23,8 @@ function base64UrlEncode(input: Buffer | string): string {
 
 function base64UrlDecode(input: string): Buffer {
   const pad = 4 - (input.length % 4 || 4);
-  const normalized = input.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat(pad);
+  const normalized =
+    input.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat(pad);
   return Buffer.from(normalized, "base64");
 }
 
@@ -43,7 +44,9 @@ function sign(data: string, secret: string): string {
   return base64UrlEncode(sig);
 }
 
-export function createAdminSessionToken(payload: Omit<AdminSession, "iat" | "exp">): string {
+export function createAdminSessionToken(
+  payload: Omit<AdminSession, "iat" | "exp">,
+): string {
   const now = Math.floor(Date.now() / 1000);
   const session: AdminSession = {
     ...payload,
@@ -83,14 +86,15 @@ export function verifyAdminSessionToken(token: string): AdminSession | null {
   return parsed;
 }
 
-export function getAdminSession(): AdminSession | null {
-  const token = cookies().get(ADMIN_COOKIE_NAME)?.value || "";
+export async function getAdminSession(): Promise<AdminSession | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value || "";
   return verifyAdminSessionToken(token);
 }
 
-export function safeGetAdminSession(): AdminSession | null {
+export async function safeGetAdminSession(): Promise<AdminSession | null> {
   try {
-    return getAdminSession();
+    return await getAdminSession();
   } catch {
     return null;
   }

@@ -51,7 +51,6 @@ Optional (feature-gated):
 - `ADMIN_SESSION_SECRET` (required to sign admin sessions)
 - `ADMIN_EMAIL` and `ADMIN_PASSWORD` (optional first-run admin bootstrap for `/admin/login`)
 - `ADMIN_BOOTSTRAP_KEY` (optional one-time bootstrap via `POST /api/admin/bootstrap`)
-- `SEED_KEY` (optional; allow `GET /api/seed` with header `x-seed-key`)
 
 ### 3) Run Dev Server
 
@@ -65,9 +64,13 @@ Open `http://localhost:3000`.
 
 This endpoint clears and repopulates collections (categories, menu, offers, deals, testimonials, story):
 
-- `GET /api/seed`
+- `POST /api/seed`
 
-Use it only in development.
+Restrictions:
+
+- Admin session required
+- Disabled in production
+- Use it only in development
 
 ## API Notes
 

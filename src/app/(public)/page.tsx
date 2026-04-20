@@ -7,6 +7,13 @@ import { ArrowRight, Star } from "lucide-react";
 import dbConnect from "@/lib/dbConnect";
 import Image from "next/image";
 
+type HomeTestimonial = {
+  rating?: number;
+  comment?: string;
+  imageUrl?: string;
+  customerName?: string;
+};
+
 async function getHomeData() {
   try {
     await dbConnect();
@@ -24,6 +31,9 @@ async function getHomeData() {
 
 export default async function Home() {
   const { story, deals, testimonials } = await getHomeData();
+  const testimonialsSafe: HomeTestimonial[] = Array.isArray(testimonials)
+    ? testimonials
+    : [];
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -105,7 +115,7 @@ export default async function Home() {
             What Our Magic Family Says
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((t, i) => (
+            {testimonialsSafe.map((t, i) => (
               <div
                 key={i}
                 className="glass-card p-10 rounded-4xl text-left border border-secondary/5 hover:border-brand-red/20 transition-all flex flex-col"
@@ -118,21 +128,23 @@ export default async function Home() {
                     ))}
                 </div>
                 <p className="text-foreground/80 italic mb-8 text-lg flex-1">
-                  &ldquo;{t.comment}&rdquo;
+                  &ldquo;{t.comment || "A magical dining experience."}&rdquo;
                 </p>
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-secondary/10 rounded-full relative overflow-hidden">
                     {t.imageUrl && (
                       <Image
                         src={t.imageUrl}
-                        alt={t.customerName}
+                        alt={t.customerName || "Customer"}
                         fill
                         className="object-cover"
                       />
                     )}
                   </div>
                   <div>
-                    <h4 className="font-bold">{t.customerName}</h4>
+                    <h4 className="font-bold">
+                      {t.customerName || "Customer"}
+                    </h4>
                     <span className="text-xs text-foreground/50">
                       Magic Customer
                     </span>

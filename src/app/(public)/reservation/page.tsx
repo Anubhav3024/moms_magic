@@ -167,16 +167,22 @@ const ReservationPage = () => {
                   <span className="text-foreground/60 font-semibold">
                     Booking ID
                   </span>
-                  <span className="font-bold">{created?.bookingId || "MM-"}</span>
+                  <span className="font-bold">
+                    {created?.bookingId || "MM-"}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-foreground/60 font-semibold">Guests</span>
+                  <span className="text-foreground/60 font-semibold">
+                    Guests
+                  </span>
                   <span className="font-bold">{formData.seats}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-foreground/60 font-semibold">Date</span>
                   <span className="font-bold">
-                    {formData.date ? new Date(formData.date).toLocaleDateString() : "-"}
+                    {formData.date
+                      ? new Date(formData.date).toLocaleDateString()
+                      : "-"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -185,10 +191,13 @@ const ReservationPage = () => {
                 </div>
                 <div className="flex justify-between items-center border-t border-secondary/10 pt-4 text-lg">
                   <span className="font-semibold">Advance (Pending)</span>
-                  <span className="text-brand-red font-bold">INR {totalPayable}</span>
+                  <span className="text-brand-red font-bold">
+                    INR {totalPayable}
+                  </span>
                 </div>
                 <p className="text-xs text-foreground/40 text-center">
-                  You can pay the advance via Razorpay if it is configured on the server.
+                  You can pay the advance via Razorpay if it is configured on
+                  the server.
                 </p>
               </div>
 
@@ -209,7 +218,6 @@ const ReservationPage = () => {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                          amount: totalPayable,
                           reservationId: created._id,
                         }),
                       });
@@ -238,11 +246,13 @@ const ReservationPage = () => {
                           return;
                         }
                         const script = document.createElement("script");
-                        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+                        script.src =
+                          "https://checkout.razorpay.com/v1/checkout.js";
                         script.async = true;
                         script.dataset.razorpay = "true";
                         script.onload = () => resolve();
-                        script.onerror = () => reject(new Error("Failed to load Razorpay"));
+                        script.onerror = () =>
+                          reject(new Error("Failed to load Razorpay"));
                         document.body.appendChild(script);
                       });
 
@@ -262,14 +272,17 @@ const ReservationPage = () => {
                         description: `Advance for ${created.bookingId}`,
                         order_id: payload.order.id,
                         handler: async (response) => {
-                          const verifyRes = await fetch("/api/razorpay/verify", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              reservationId: created._id,
-                              ...response,
-                            }),
-                          });
+                          const verifyRes = await fetch(
+                            "/api/razorpay/verify",
+                            {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                reservationId: created._id,
+                                ...response,
+                              }),
+                            },
+                          );
                           const verifyData = (await verifyRes.json()) as
                             | { success: true }
                             | { error?: string };
@@ -299,7 +312,9 @@ const ReservationPage = () => {
                       const rzp = new RazorpayCtor(options);
                       rzp.open();
                     } catch (err: unknown) {
-                      setError(err instanceof Error ? err.message : "Payment failed");
+                      setError(
+                        err instanceof Error ? err.message : "Payment failed",
+                      );
                     } finally {
                       setPaying(false);
                     }
@@ -342,181 +357,190 @@ const ReservationPage = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-8">
-            {step === 1 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold opacity-60 ml-2">
-                    Full Name
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="Enter your name"
-                    className="w-full px-6 py-4 bg-primary/20 rounded-2xl border-none focus:ring-2 focus:ring-brand-red/20 outline-none"
-                    value={formData.userName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, userName: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold opacity-60 ml-2">
-                    Email Address
-                  </label>
-                  <input
-                    required
-                    type="email"
-                    placeholder="your@email.com"
-                    className="w-full px-6 py-4 bg-primary/20 rounded-2xl border-none focus:ring-2 focus:ring-brand-red/20 outline-none"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold opacity-60 ml-2">
-                    Phone Number
-                  </label>
-                  <input
-                    required
-                    type="tel"
-                    placeholder="+91 9876543210"
-                    className="w-full px-6 py-4 bg-primary/20 rounded-2xl border-none focus:ring-2 focus:ring-brand-red/20 outline-none"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold opacity-60 ml-2">
-                    Number of Seats
-                  </label>
-                  <div className="flex items-center gap-4 bg-primary/20 p-2 rounded-2xl">
-                    <button
-                      type="button"
-                      className="w-12 h-12 bg-white rounded-xl shadow-sm text-brand-red font-bold"
-                      onClick={() =>
-                        setFormData({
-                          ...formData,
-                          seats: Math.max(1, formData.seats - 1),
-                        })
+              {step === 1 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold opacity-60 ml-2">
+                      Full Name
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="Enter your name"
+                      className="w-full px-6 py-4 bg-primary/20 rounded-2xl border-none focus:ring-2 focus:ring-brand-red/20 outline-none"
+                      value={formData.userName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, userName: e.target.value })
                       }
-                    >
-                      -
-                    </button>
-                    <span className="flex-1 text-center font-bold text-lg">
-                      {formData.seats}
-                    </span>
-                    <button
-                      type="button"
-                      className="w-12 h-12 bg-white rounded-xl shadow-sm text-brand-red font-bold"
-                      onClick={() =>
-                        setFormData({ ...formData, seats: formData.seats + 1 })
-                      }
-                    >
-                      +
-                    </button>
+                    />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold opacity-60 ml-2">
-                    Date
-                  </label>
-                  <input
-                    required
-                    type="date"
-                    className="w-full px-6 py-4 bg-primary/20 rounded-2xl border-none outline-none"
-                    value={formData.date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, date: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold opacity-60 ml-2">
-                    Time Slot
-                  </label>
-                  <input
-                    required
-                    type="time"
-                    className="w-full px-6 py-4 bg-primary/20 rounded-2xl border-none outline-none"
-                    value={formData.time}
-                    onChange={(e) =>
-                      setFormData({ ...formData, time: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {offers.map((offer) => (
-                    <div
-                      key={offer._id}
-                      onClick={() =>
-                        setFormData({ ...formData, offerId: offer._id })
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold opacity-60 ml-2">
+                      Email Address
+                    </label>
+                    <input
+                      required
+                      type="email"
+                      placeholder="your@email.com"
+                      className="w-full px-6 py-4 bg-primary/20 rounded-2xl border-none focus:ring-2 focus:ring-brand-red/20 outline-none"
+                      value={formData.email}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
                       }
-                      className={`cursor-pointer p-6 rounded-3xl border-2 transition-all ${
-                        formData.offerId === offer._id
-                          ? "border-brand-red bg-brand-red/5"
-                          : "border-secondary/10 hover:border-secondary/30"
-                      }`}
-                    >
-                      <h3 className="font-bold text-lg mb-2">{offer.title}</h3>
-                      <p className="text-sm text-foreground/60 leading-relaxed mb-4">
-                        {offer.description}
-                      </p>
-                      <p className="font-bold text-brand-red">
-                        INR {offer.advanceAmountPerPerson} / person
-                      </p>
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold opacity-60 ml-2">
+                      Phone Number
+                    </label>
+                    <input
+                      required
+                      type="tel"
+                      placeholder="+91 9876543210"
+                      className="w-full px-6 py-4 bg-primary/20 rounded-2xl border-none focus:ring-2 focus:ring-brand-red/20 outline-none"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold opacity-60 ml-2">
+                      Number of Seats
+                    </label>
+                    <div className="flex items-center gap-4 bg-primary/20 p-2 rounded-2xl">
+                      <button
+                        type="button"
+                        className="w-12 h-12 bg-white rounded-xl shadow-sm text-brand-red font-bold"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            seats: Math.max(1, formData.seats - 1),
+                          })
+                        }
+                      >
+                        -
+                      </button>
+                      <span className="flex-1 text-center font-bold text-lg">
+                        {formData.seats}
+                      </span>
+                      <button
+                        type="button"
+                        className="w-12 h-12 bg-white rounded-xl shadow-sm text-brand-red font-bold"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            seats: formData.seats + 1,
+                          })
+                        }
+                      >
+                        +
+                      </button>
                     </div>
-                  ))}
-                </div>
-
-                <div className="bg-primary/20 p-8 rounded-3xl space-y-4">
-                  <div className="flex justify-between items-center text-lg">
-                    <span>Reservation for {formData.seats} people</span>
-                    <span className="font-semibold">INR {totalPayable}</span>
                   </div>
-                  <div className="flex justify-between items-center text-xl font-bold border-t border-secondary/20 pt-4">
-                    <span>Total Payable Tomorrow</span>
-                    <span className="text-brand-red">INR {totalPayable}</span>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold opacity-60 ml-2">
+                      Date
+                    </label>
+                    <input
+                      required
+                      type="date"
+                      className="w-full px-6 py-4 bg-primary/20 rounded-2xl border-none outline-none"
+                      value={formData.date}
+                      onChange={(e) =>
+                        setFormData({ ...formData, date: e.target.value })
+                      }
+                    />
                   </div>
-                  <p className="text-xs text-foreground/40 text-center">
-                    *This advance is non-refundable and will be adjusted in your
-                    final bill.
-                  </p>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold opacity-60 ml-2">
+                      Time Slot
+                    </label>
+                    <input
+                      required
+                      type="time"
+                      className="w-full px-6 py-4 bg-primary/20 rounded-2xl border-none outline-none"
+                      value={formData.time}
+                      onChange={(e) =>
+                        setFormData({ ...formData, time: e.target.value })
+                      }
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {offers.map((offer) => (
+                      <div
+                        key={offer._id}
+                        onClick={() =>
+                          setFormData({ ...formData, offerId: offer._id })
+                        }
+                        className={`cursor-pointer p-6 rounded-3xl border-2 transition-all ${
+                          formData.offerId === offer._id
+                            ? "border-brand-red bg-brand-red/5"
+                            : "border-secondary/10 hover:border-secondary/30"
+                        }`}
+                      >
+                        <h3 className="font-bold text-lg mb-2">
+                          {offer.title}
+                        </h3>
+                        <p className="text-sm text-foreground/60 leading-relaxed mb-4">
+                          {offer.description}
+                        </p>
+                        <p className="font-bold text-brand-red">
+                          INR {offer.advanceAmountPerPerson} / person
+                        </p>
+                      </div>
+                    ))}
+                  </div>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl font-semibold">
-                {error}
-              </div>
-            )}
-
-            <div className="flex justify-between items-center pt-4">
-              {step > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="text-foreground/50 font-semibold hover:text-foreground"
-                >
-                  Back
-                </button>
+                  <div className="bg-primary/20 p-8 rounded-3xl space-y-4">
+                    <div className="flex justify-between items-center text-lg">
+                      <span>Reservation for {formData.seats} people</span>
+                      <span className="font-semibold">INR {totalPayable}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xl font-bold border-t border-secondary/20 pt-4">
+                      <span>Total Payable Tomorrow</span>
+                      <span className="text-brand-red">INR {totalPayable}</span>
+                    </div>
+                    <p className="text-xs text-foreground/40 text-center">
+                      *This advance is non-refundable and will be adjusted in
+                      your final bill.
+                    </p>
+                  </div>
+                </div>
               )}
-              <button
-                type="submit"
-                disabled={submitting}
-                className="ml-auto flex items-center gap-2 bg-brand-red text-white px-10 py-5 rounded-2xl font-bold text-lg shadow-xl hover:shadow-brand-red/20 transition-all hover:-translate-y-1"
-              >
-                {step === 1 ? "Select Offer" : submitting ? "Creating..." : "Confirm Booking"}
-                <ChevronRight size={20} />
-              </button>
-            </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl font-semibold">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex justify-between items-center pt-4">
+                {step > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="text-foreground/50 font-semibold hover:text-foreground"
+                  >
+                    Back
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="ml-auto flex items-center gap-2 bg-brand-red text-white px-10 py-5 rounded-2xl font-bold text-lg shadow-xl hover:shadow-brand-red/20 transition-all hover:-translate-y-1"
+                >
+                  {step === 1
+                    ? "Select Offer"
+                    : submitting
+                      ? "Creating..."
+                      : "Confirm Booking"}
+                  <ChevronRight size={20} />
+                </button>
+              </div>
             </form>
           )}
         </motion.div>

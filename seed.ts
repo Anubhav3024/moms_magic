@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
 dotenv.config();
-import dbConnect from "./src/lib/dbConnect.ts";
+import dbConnect from "./src/lib/dbConnect";
 import {
   Category,
   MenuItem,
@@ -8,7 +8,7 @@ import {
   Deal,
   Testimonial,
   Story,
-} from "./src/models/index.ts";
+} from "./src/models";
 
 const seed = async () => {
   await dbConnect();

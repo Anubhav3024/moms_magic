@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { MenuItem } from "@/models";
 import { getAdminSession } from "@/lib/adminSession";
+import { asValidationMessage, menuItemUpsertSchema } from "@/lib/validation";
 
 export async function GET(request: Request) {
   try {
@@ -25,17 +26,20 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = getAdminSession();
+    const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
-    const body = await request.json();
+    const body = menuItemUpsertSchema.parse(await request.json());
     const newItem = await MenuItem.create(body);
     return NextResponse.json(newItem, { status: 201 });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Create error";
+    const message =
+      asValidationMessage(error) ||
+      (error instanceof Error ? error.message : "Create error");
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
+

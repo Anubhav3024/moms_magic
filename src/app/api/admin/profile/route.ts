@@ -4,10 +4,14 @@ import dbConnect from "@/lib/dbConnect";
 import { Admin } from "@/models";
 import { getAdminSession } from "@/lib/adminSession";
 import { hashPassword } from "@/lib/password";
+import {
+  adminProfileUpdateSchema,
+  asValidationMessage,
+} from "@/lib/validation";
 
 export async function GET() {
   try {
-    const session = getAdminSession();
+    const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -33,27 +37,29 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = getAdminSession();
+    const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
-    const body = (await request.json()) as {
-      name?: string;
-      email?: string;
-      password?: string;
-      profileImage?: string;
-    };
+    const body = adminProfileUpdateSchema.parse(await request.json());
 
     const updateData: Record<string, unknown> = {};
-    if (typeof body?.name === "string") updateData.name = body.name.trim();
-    if (typeof body?.email === "string")
+    if (typeof body.name === "string") updateData.name = body.name.trim();
+    if (typeof body.email === "string")
       updateData.email = body.email.trim().toLowerCase();
-    if (typeof body?.profileImage === "string")
+    if (typeof body.profileImage === "string")
       updateData.profileImage = body.profileImage.trim();
-    if (typeof body?.password === "string" && body.password.trim()) {
+    if (typeof body.password === "string" && body.password.trim()) {
       updateData.passwordHash = hashPassword(body.password);
+    }
+
+    if (!Object.keys(updateData).length) {
+      return NextResponse.json(
+        { error: "No valid fields to update" },
+        { status: 400 },
+      );
     }
 
     const admin = await Admin.findByIdAndUpdate(session.sub, updateData, {
@@ -72,7 +78,9 @@ export async function POST(request: Request) {
       role: admin.role,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Update error";
+    const message =
+      asValidationMessage(error) ||
+      (error instanceof Error ? error.message : "Update error");
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
@@ -80,3 +88,4 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   return POST(request);
 }
+

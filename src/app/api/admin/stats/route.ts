@@ -6,7 +6,7 @@ import { getAdminSession } from "@/lib/adminSession";
 
 export async function GET() {
   try {
-    const session = getAdminSession();
+    const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -43,3 +43,4 @@ export async function GET() {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

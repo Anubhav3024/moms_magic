@@ -4,6 +4,11 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Reservation } from "@/models";
+import {
+  expectedReservationAmountMinorUnits,
+  hasExactAmountAndCurrencyMatch,
+  normalizeCurrency,
+} from "@/lib/paymentIntegrity";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object") return null;
@@ -34,7 +39,10 @@ export async function POST(request: Request) {
     }
 
     const raw = await request.text();
-    const expected = crypto.createHmac("sha256", secret).update(raw).digest("hex");
+    const expected = crypto
+      .createHmac("sha256", secret)
+      .update(raw)
+      .digest("hex");
 
     if (!timingSafeEqualHex(expected, signature)) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
@@ -62,6 +70,8 @@ export async function POST(request: Request) {
     const orderId = String(entityObj?.order_id || "");
     const paymentId = String(entityObj?.id || "");
     const status = String(entityObj?.status || "");
+    const amount = Number(entityObj?.amount || 0);
+    const currency = String(entityObj?.currency || "INR");
 
     if (!orderId) {
       return NextResponse.json({ ok: true });
@@ -73,12 +83,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    const expectedAmount = Number.isFinite(
+      Number(reservation.razorpayExpectedAmount),
+    )
+      ? Number(reservation.razorpayExpectedAmount)
+      : expectedReservationAmountMinorUnits(
+          Number(reservation.totalAmount || 0),
+        );
+    const expectedCurrency = normalizeCurrency(
+      String(reservation.razorpayCurrency || currency || "INR"),
+    );
+
+    const matches = hasExactAmountAndCurrencyMatch({
+      expectedAmount,
+      expectedCurrency,
+      actualAmount: amount,
+      actualCurrency: currency,
+    });
+
+    if (!matches) {
+      return NextResponse.json(
+        { error: "Order amount or currency mismatch" },
+        { status: 400 },
+      );
+    }
+
     if (event === "payment.captured" || status === "captured") {
       if (reservation.paymentStatus !== "paid") {
         reservation.paymentStatus = "paid";
       }
       reservation.paymentProvider = "razorpay";
       reservation.razorpayOrderId = orderId;
+      reservation.razorpayExpectedAmount = expectedAmount;
+      reservation.razorpayCurrency = expectedCurrency;
       if (paymentId) reservation.razorpayPaymentId = paymentId;
       await reservation.save();
     }
@@ -87,6 +124,8 @@ export async function POST(request: Request) {
       reservation.paymentStatus = "failed";
       reservation.paymentProvider = "razorpay";
       reservation.razorpayOrderId = orderId;
+      reservation.razorpayExpectedAmount = expectedAmount;
+      reservation.razorpayCurrency = expectedCurrency;
       if (paymentId) reservation.razorpayPaymentId = paymentId;
       await reservation.save();
     }

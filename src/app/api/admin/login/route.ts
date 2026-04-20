@@ -5,6 +5,7 @@ import dbConnect from "@/lib/dbConnect";
 import { Admin } from "@/models";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { ADMIN_COOKIE_NAME, createAdminSessionToken } from "@/lib/adminSession";
+import { adminLoginSchema, asValidationMessage } from "@/lib/validation";
 
 function cookieOptions() {
   const isProd = process.env.NODE_ENV === "production";
@@ -20,19 +21,10 @@ function cookieOptions() {
 export async function POST(request: Request) {
   try {
     await dbConnect();
-    const body = (await request.json()) as { email?: string; password?: string };
+    const body = adminLoginSchema.parse(await request.json());
 
-    const email = String(body?.email || "")
-      .trim()
-      .toLowerCase();
-    const password = String(body?.password || "");
-
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password are required" },
-        { status: 400 },
-      );
-    }
+    const email = body.email.trim().toLowerCase();
+    const password = body.password;
 
     let admin = await Admin.findOne({ email });
 
@@ -43,7 +35,12 @@ export async function POST(request: Request) {
         .toLowerCase();
       const bootPass = String(process.env.ADMIN_PASSWORD || "");
 
-      if (bootEmail && bootPass && email === bootEmail && password === bootPass) {
+      if (
+        bootEmail &&
+        bootPass &&
+        email === bootEmail &&
+        password === bootPass
+      ) {
         admin = await Admin.create({
           name: "Magic Admin",
           email: bootEmail,
@@ -55,7 +52,10 @@ export async function POST(request: Request) {
     }
 
     if (!admin) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 },
+      );
     }
 
     const hash = String(admin.passwordHash || "");
@@ -71,7 +71,10 @@ export async function POST(request: Request) {
 
     const ok = verifyPassword(password, hash);
     if (!ok) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 },
+      );
     }
 
     const token = createAdminSessionToken({
@@ -81,13 +84,21 @@ export async function POST(request: Request) {
     });
 
     const res = NextResponse.json({
-      admin: { id: String(admin._id), email: admin.email, role: admin.role, name: admin.name },
+      admin: {
+        id: String(admin._id),
+        email: admin.email,
+        role: admin.role,
+        name: admin.name,
+      },
     });
     res.cookies.set(ADMIN_COOKIE_NAME, token, cookieOptions());
     return res;
   } catch (error: unknown) {
+    const validationMessage = asValidationMessage(error);
+    if (validationMessage) {
+      return NextResponse.json({ error: validationMessage }, { status: 400 });
+    }
     const message = error instanceof Error ? error.message : "Login error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

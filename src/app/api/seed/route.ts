@@ -8,19 +8,21 @@ import {
   Testimonial,
   Story,
 } from "@/models";
-import { safeGetAdminSession } from "@/lib/adminSession";
+import { getAdminSession } from "@/lib/adminSession";
 
-export async function GET(request: Request) {
+export async function POST() {
   try {
-    const expectedKey = String(process.env.SEED_KEY || "");
-    const providedKey = String(request.headers.get("x-seed-key") || "");
-    const admin = safeGetAdminSession();
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { error: "Seed endpoint is disabled in production" },
+        { status: 403 },
+      );
+    }
 
-    // Allow seeding only for admins OR via SEED_KEY (useful for local/dev automation).
-    if (!admin) {
-      if (!expectedKey || providedKey !== expectedKey) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    const admin = await getAdminSession();
+
+    if (!admin || String(admin.role || "") !== "admin") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
@@ -179,15 +181,13 @@ export async function GET(request: Request) {
   } catch (error: unknown) {
     console.error("Seeding error:", error);
     const message = error instanceof Error ? error.message : "Seed error";
-    const stack = error instanceof Error ? error.stack : undefined;
     return NextResponse.json(
       {
         message: "Seeding failed magic!",
         error: message,
-        stack,
-        uri_prefix: process.env.MONGODB_URI?.substring(0, 20),
       },
       { status: 500 },
     );
   }
 }
+

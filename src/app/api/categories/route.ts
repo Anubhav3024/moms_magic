@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Category } from "@/models";
 import { getAdminSession } from "@/lib/adminSession";
+import { asValidationMessage, categoryCreateSchema } from "@/lib/validation";
 
 export async function GET() {
   try {
@@ -17,17 +18,20 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = getAdminSession();
+    const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
-    const body = await request.json();
+    const body = categoryCreateSchema.parse(await request.json());
     const newCategory = await Category.create(body);
     return NextResponse.json(newCategory, { status: 201 });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Create error";
+    const message =
+      asValidationMessage(error) ||
+      (error instanceof Error ? error.message : "Create error");
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
+
